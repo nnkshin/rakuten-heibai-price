@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Amazon・楽天の利益計算</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+JP:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@700;900&display=swap">
+<style>
+/* 入力（左）→ 利益（右の2枚）→ 内訳と早見表（下）。heibai-price.html と同じトークン */
+:root{
+  --bg:#F2F4F1; --panel:#FFFFFF; --ink:#1C2421; --muted:#5E6A65; --line:#D8DDD8; --soft:#E8ECE8;
+  --accent:#1F6F66; --accent-ink:#FFFFFF; --warn:#9A5B00;
+  --f-display:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-body:"IBM Plex Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131816; --panel:#1B221F; --ink:#E6ECE9; --muted:#98A5A0; --line:#2D3733; --soft:#232B28;
+    --accent:#5DB8AB; --accent-ink:#0E1614; --warn:#E0A54A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#131816; --panel:#1B221F; --ink:#E6ECE9; --muted:#98A5A0; --line:#2D3733; --soft:#232B28;
+  --accent:#5DB8AB; --accent-ink:#0E1614; --warn:#E0A54A; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.6;padding-inline:16px;padding-block:28px 48px}
+.wrap{max-width:980px;margin:0 auto;display:grid;gap:16px}
+h1{font-family:var(--f-display);font-weight:900;font-size:clamp(22px,3.2vw,30px);line-height:1.25;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;font-size:13px;max-width:70ch}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+h2{font-family:var(--f-display);font-weight:700;font-size:15px;margin:0 0 10px}
+.top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:stretch}
+@media (max-width:760px){.top{grid-template-columns:minmax(0,1fr)}}
+.fields{display:grid;gap:12px}
+label.f{display:grid;gap:4px;font-size:12.5px;color:var(--muted)}
+input[type=number],select{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+input[type=number]{font-family:var(--f-mono)}
+#pa{font-size:20px;padding:8px 10px}
+.unit{display:flex;align-items:center;gap:6px}.unit span{font-size:12px;color:var(--muted);white-space:nowrap}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.answer{background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:20px 22px;display:grid;align-content:center;gap:6px;min-width:0}
+.answer .l{font-size:13px;opacity:.92}
+.answer .v{font-family:var(--f-mono);font-weight:500;font-size:clamp(40px,8vw,60px);line-height:1.05;font-variant-numeric:tabular-nums}
+.answer .s{font-size:13.5px;opacity:.95}
+.answer .same{font-size:12.5px;opacity:.92;border-top:1px solid color-mix(in srgb,var(--accent-ink) 35%,transparent);padding-top:8px;margin-top:4px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.two{grid-template-columns:minmax(0,1fr)}}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:5px 8px;border-bottom:1px solid var(--soft);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+thead th{font-weight:500;color:var(--muted);font-size:12px;border-bottom:1px solid var(--line)}
+td{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+td:first-child{font-family:var(--f-body)}
+tr.tot td{font-weight:600;border-top:1px solid var(--line)}
+tr.hl td{background:var(--soft)}
+td.up{color:var(--warn)}
+details summary{cursor:pointer;font-family:var(--f-display);font-weight:700;font-size:15px}
+.adv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 16px;margin-top:12px}
+@media (max-width:760px){.adv{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rate{margin:12px 0 0;font-size:13px}
+.rate b{font-family:var(--f-mono);font-weight:500}
+.scen3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.scen3{grid-template-columns:minmax(0,1fr)}}
+.sc{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:grid;gap:2px;min-width:0}
+.sc.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.sc .t{font-size:12.5px;color:var(--muted)}
+.sc .v{font-family:var(--f-mono);font-size:24px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.2}
+.sc .y{font-size:12px;color:var(--muted)}
+button{font:inherit;font-size:12.5px;color:var(--accent);background:none;border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer}
+.notes{font-size:12px;color:var(--muted);max-width:80ch}
+.notes ul{padding-left:18px;margin:6px 0}
+.pf2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-content:stretch}
+@media (max-width:420px){.pf2{grid-template-columns:minmax(0,1fr)}}
+.pf{background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:10px;padding:14px 16px;display:grid;gap:4px;align-content:start;min-width:0}
+.pf.neg{border-top-color:var(--warn)}
+.pf .l{font-size:12.5px;color:var(--muted)}
+.pf .v{font-family:var(--f-mono);font-weight:500;font-size:clamp(28px,5vw,40px);line-height:1.1;font-variant-numeric:tabular-nums;color:var(--accent)}
+.pf.neg .v{color:var(--warn)}
+.pf dl{display:grid;grid-template-columns:auto auto;gap:2px 10px;margin:6px 0 0;font-size:12.5px}
+.pf dt{color:var(--muted)}
+.pf dd{margin:0;text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.hint{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+td.neg{color:var(--warn)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div>
+    <h1>Amazon・楽天の利益計算</h1>
+    <p class="sub">販売価格と仕入値を入れると、1個あたりの利益を出します。AmazonはFBAで売ったとき、楽天はシッピーノ経由でFBA在庫から出荷したときの利益です。</p>
+  </div>
+
+  <section class="top">
+    <div class="card fields">
+      <label class="f" for="pa">Amazonの販売価格（税込）
+        <div class="unit"><input type="number" id="pa" min="100" max="1000000" step="10" inputmode="numeric"><span>円</span></div>
+      </label>
+      <label class="f" for="buy">仕入値（税込・送料込み）
+        <div class="unit"><input type="number" id="buy" min="0" max="1000000" step="10" inputmode="numeric"><span>円</span></div>
+      </label>
+      <label class="f" for="cat">Amazonのカテゴリー（販売手数料）
+        <select id="cat"></select>
+      </label>
+      <label class="f" for="size">商品のサイズ（梱包後）
+        <select id="size"></select>
+      </label>
+      <label class="f" for="pr">楽天の販売価格（税込・送料込）
+        <div class="unit"><input type="number" id="pr" min="100" max="1000000" step="10" inputmode="numeric" placeholder="空欄ならAmazonと同じ価格"><span>円</span></div>
+        <span class="hint"><span id="sameTxt"></span><button type="button" id="sameBtn">この価格を入れる</button></span>
+      </label>
+      <label class="f" for="scen">楽天の手数料の想定
+        <select id="scen"></select>
+        <span id="scenD"></span>
+      </label>
+    </div>
+    <div class="pf2" aria-live="polite">
+      <div class="pf" id="boxA">
+        <div class="l">Amazonで売ったときの利益</div>
+        <div class="v" id="pfA">—</div>
+        <dl id="dlA"></dl>
+      </div>
+      <div class="pf" id="boxR">
+        <div class="l">楽天で売ったときの利益</div>
+        <div class="v" id="pfR">—</div>
+        <dl id="dlR"></dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="two">
+    <div class="card">
+      <h2>1個あたりの内訳</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>項目</th><th>Amazon</th><th>楽天</th></tr></thead>
+        <tbody id="detail"></tbody>
+      </table></div>
+      <p class="rate">手数料と送料は、消費税を除いた額で表示しています。</p>
+    </div>
+    <div class="card">
+      <h2>販売価格ごとの利益（いまの仕入値）</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>販売価格</th><th>Amazon</th><th>楽天（同じ価格）</th></tr></thead>
+        <tbody id="quick"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <details class="card" id="advBox">
+    <summary>前提を変える（仕入の消費税・その他の費用・料金）</summary>
+    <div class="adv">
+      <label class="f" for="ded">仕入値の消費税
+        <select id="ded">
+          <option value="0">控除できない</option>
+          <option value="100">全額控除できる</option>
+          <option value="part">一部だけ控除できる</option>
+        </select>
+      </label>
+      <label class="f" for="dedP">控除できる割合（一部のとき）
+        <div class="unit"><input type="number" id="dedP" min="0" max="100" step="10"><span>%</span></div>
+      </label>
+      <label class="f" for="other">その他の費用（税込・1個）
+        <div class="unit"><input type="number" id="other" min="0" step="10"><span>円</span></div>
+      </label>
+      <label class="f" for="fba">FBA配送代行手数料（税込）
+        <div class="unit"><input type="number" id="fba" min="0" step="1"><span>円</span></div>
+      </label>
+      <label class="f" for="mcf">MCF配送料・通常1点（税込）
+        <div class="unit"><input type="number" id="mcf" min="0" step="1"><span>円</span></div>
+      </label>
+      <label class="f" for="remote">遠隔地あての割合（+40円）
+        <div class="unit"><input type="number" id="remote" min="0" max="100" step="1"><span>%</span></div>
+      </label>
+      <label class="f" for="rush">お急ぎ便で出す割合
+        <div class="unit"><input type="number" id="rush" min="0" max="100" step="1"><span>%</span></div>
+      </label>
+      <label class="f" for="shp">シッピーノ従量（税別・1件）
+        <div class="unit"><input type="number" id="shp" min="0" step="1"><span>円</span></div>
+      </label>
+      <label class="f" for="sys">楽天 システム利用料（税別）
+        <div class="unit"><input type="number" id="sys" min="0" step="0.01"><span>%</span></div>
+      </label>
+      <label class="f" for="pay">楽天ペイ利用料（税別）
+        <div class="unit"><input type="number" id="pay" min="0" step="0.01"><span>%</span></div>
+      </label>
+      <label class="f" for="pt">楽天ポイント付与
+        <div class="unit"><input type="number" id="pt" min="0" step="0.5"><span>倍（%）</span></div>
+      </label>
+      <label class="f" for="affS">アフィリエイト経由の割合
+        <div class="unit"><input type="number" id="affS" min="0" max="100" step="1"><span>%</span></div>
+      </label>
+      <label class="f" for="affR">アフィリエイト料率
+        <div class="unit"><input type="number" id="affR" min="0" step="0.5"><span>%</span></div>
+      </label>
+      <label class="f" for="ad">楽天の広告費（売上比・税別）
+        <div class="unit"><input type="number" id="ad" min="0" step="0.5"><span>%</span></div>
+      </label>
+      <label class="f" for="cp">楽天のクーポン値引（売価比）
+        <div class="unit"><input type="number" id="cp" min="0" step="0.5"><span>%</span></div>
+      </label>
+      <label class="f" for="apt">Amazonポイント付与
+        <div class="unit"><input type="number" id="apt" min="0" step="0.5"><span>%</span></div>
+      </label>
+    </div>
+    <p class="rate" id="rate"></p>
+    <button type="button" id="reset">前提を初期値に戻す</button>
+  </details>
+
+  <div class="notes">
+    <b>計算の考え方</b>
+    <ul>
+      <li>利益は、消費税を除いた額です。売上にかかる消費税は納める分として引いています。</li>
+      <li>仕入値の消費税は「控除できない」が初期値で、入力した仕入値をそのまま原価にしています。インボイスのある仕入先などで控除できる場合は「前提を変える」で切り替えてください。</li>
+      <li>Amazon側は販売手数料とFBA配送代行手数料、楽天側は楽天の手数料・MCF配送料・シッピーノの従量料金を引いています。</li>
+      <li>FBAの保管料、FBAへの納品送料、返品の費用は入っていません。見込む場合は「その他の費用」に1個あたりの額を入れてください。Amazonと楽天の両方から引きます。</li>
+      <li>楽天の月額出店料とシッピーノの月額は入れていません。メディア（本・DVDなど）は対象外です。</li>
+      <li>利益率は利益÷販売価格（税込）、ROIは利益÷仕入値です。</li>
+      <li>料金は、FBA配送代行手数料が2026年4月改定、MCF配送料が2026年9月29日改定、Amazon販売手数料が2026年10月時点の料金表です。</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+/*CALC-BEGIN*/
+// Amazon販売手数料（税別の率）。b＝売価の帯ごとの率、m＝[上限額, 上限までの率, 超えた分の率]、min＝最低販売手数料
+const L5=[750,.05];
+const CATS=[
+ {g:'8.4%',  n:'エレクトロニクス',            b:[L5,[Infinity,.084]],min:30},
+ {g:'8.4%',  n:'パソコン・周辺機器',          b:[L5,[Infinity,.084]],min:30},
+ {g:'8.4%',  n:'小型家電・大型家電',          b:[L5,[Infinity,.084]],min:30},
+ {g:'8.4%',  n:'TVゲーム機本体',              b:[L5,[Infinity,.084]],min:30},
+ {g:'10.4%', n:'エレクトロニクス アクセサリ', b:[L5,[Infinity,.104]],min:30},
+ {g:'10.4%', n:'楽器およびAV制作機器',        b:[L5,[Infinity,.104]],min:30},
+ {g:'10.4%', n:'スポーツ&アウトドア',         b:[L5,[Infinity,.104]],min:30},
+ {g:'10.4%', n:'カー&バイク用品・タイヤ',     b:[L5,[Infinity,.104]],min:30},
+ {g:'10.4%', n:'おもちゃ&ホビー',             b:[L5,[Infinity,.104]],min:30},
+ {g:'10.4%', n:'ホーム&キッチン家電',         b:[L5,[Infinity,.104]],min:30},
+ {g:'10.4%', n:'ビューティー、ヘルスケア&パーソナルケア', b:[L5,[1500,.084],[Infinity,.104]],min:30},
+ {g:'10.4%', n:'食品&飲料',                   b:[L5,[1500,.084],[Infinity,.104]],min:30},
+ {g:'10.4%', n:'業務用医療用品',              b:[L5,[1500,.084],[Infinity,.104]],min:30},
+ {g:'15.4%', n:'ホーム&キッチン',             b:[L5,[Infinity,.154]],min:30},
+ {g:'15.4%', n:'DIY・工具',                   b:[L5,[Infinity,.154]],min:30},
+ {g:'15.4%', n:'文房具・オフィス用品',        b:[L5,[Infinity,.154]],min:30},
+ {g:'15.4%', n:'ガーデニング・園芸用品',      b:[L5,[Infinity,.154]],min:30},
+ {g:'15.4%', n:'家具・マットレス',            b:[L5,[Infinity,.154]],min:30},
+ {g:'15.4%', n:'産業・研究開発用品',          b:[L5,[Infinity,.154]],min:30},
+ {g:'15.4%', n:'腕時計',                      b:[L5,[Infinity,.154]],min:30},
+ {g:'15.4%', n:'ペット用品',                  b:[L5,[1500,.084],[Infinity,.154]],min:30},
+ {g:'15.4%', n:'ベビー&マタニティ',           b:[L5,[1500,.084],[Infinity,.154]],min:30},
+ {g:'15.4%', n:'TVゲーム&ゲーム用アクセサリ', b:[[Infinity,.154]],min:0},
+ {g:'15.4%', n:'その他のカテゴリー',          b:[L5,[Infinity,.154]],min:30},
+ {g:'段階制・その他', n:'服&ファッション小物', b:[L5,[2500,.084],[3000,.124]],m:[3000,.124,.084],min:30},
+ {g:'段階制・その他', n:'アイウェア',          b:[L5,[3000,.124]],m:[3000,.124,.084],min:30},
+ {g:'段階制・その他', n:'シューズ',            b:[L5,[7500,.124]],m:[7500,.124,.064],min:30},
+ {g:'段階制・その他', n:'バッグ・旅行かばん',  b:[L5,[7500,.124]],m:[7500,.124,.064],min:30},
+ {g:'段階制・その他', n:'ジュエリー',          b:[L5,[10000,.104]],m:[10000,.104,.064],min:30},
+ {g:'段階制・その他', n:'ビール',              b:[L5,[Infinity,.069]],min:30},
+ {g:'段階制・その他', n:'Amazonデバイス用アクセサリ', b:[[Infinity,.454]],min:30},
+];
+// サイズ：[名前, FBA配送代行 1,000円以下, 同 1,000円超, MCF通常配送1点, MCFお急ぎ便1点]（すべて税込）
+const SIZES=[
+ ['小型（25×18×2cm・250gまで）',222,288,561,607],
+ ['標準・薄型（35×30×3.3cm・1kgまで）',252,318,581,627],
+ ['標準・3辺20cmまで（2kgまで）',344,410,624,643],
+ ['標準・3辺30cmまで（2kgまで）',358,415,645,664],
+ ['標準・3辺40cmまで（2kgまで）',371,420,665,685],
+ ['標準・3辺50cmまで（2kgまで）',379,425,675,692],
+ ['標準・3辺60cmまで（2kgまで）',391,430,692,702],
+ ['標準・3辺80cmまで（5kgまで）',427,472,826,905],
+ ['標準・3辺100cmまで（9kgまで）',466,532,1012,1063],
+ ['大型・3辺60cmまで（2kgまで）',523,589,930,976],
+ ['大型・3辺80cmまで（5kgまで）',558,624,941,988],
+ ['大型・3辺100cmまで（10kgまで）',609,675,1124,1181],
+ ['大型・3辺120cmまで（15kgまで）',715,781,1265,1328],
+ ['大型・3辺140cmまで（20kgまで）',954,1020,1347,1500],
+ ['大型・3辺160cmまで（25kgまで）',1034,1100,1563,1849],
+ ['大型・3辺180cmまで（30kgまで）',1466,1532,2255,2327],
+ ['大型・3辺200cmまで（40kgまで）',1690,1756,2933,3701],
+];
+function amazonFee(P,c){ // 税別
+  let f;
+  if(c.m&&P>c.m[0]) f=c.m[0]*c.m[1]+(P-c.m[0])*c.m[2];
+  else{ let r=c.b[c.b.length-1][1]; for(const [lim,rate] of c.b){ if(P<=lim){r=rate;break;} } f=P*r; }
+  return Math.max(f,c.min);
+}
+function fbaFee(P,size){return P<=1000?SIZES[size][1]:SIZES[size][2];}
+// 楽天で売価にかかる率（税込売価に対する、税別の費用）
+function rakRate(a){
+  return (a.sys+a.pay+0.1)/100 + a.pt/100/1.1 + a.ad/100 + a.cp/100/1.1 + a.affS/100*a.affR/100*1.3;
+}
+// 1個あたり手元に残る額（税別・仕入値と保管料を引く前）
+function netAmazon(P,c,fbaTaxIn,a){return P/1.1-amazonFee(P,c)-fbaTaxIn/1.1-P*a.apt/100/1.1;}
+function rakFixed(a){return (a.mcf+a.remote/100*40)/1.1+a.shp;}
+function netRakuten(P,a){return P/1.1-P*rakRate(a)-rakFixed(a);}
+function rakutenPrice(P,c,fbaTaxIn,a){return (netAmazon(P,c,fbaTaxIn,a)+rakFixed(a))/(1/1.1-rakRate(a));}
+function mcfUse(size,a){return (1-a.rush/100)*SIZES[size][3]+a.rush/100*SIZES[size][4];}
+// 楽天側の手数料の想定
+const PRE={
+ real: {n:'現実的（ふだんはこれくらい）', d:'広告・クーポンなし。アフィリエイト経由5%、遠隔地あて15%。',
+        remote:15,rush:0,shp:27,sys:4.24,pay:3.47,pt:1,affS:5,affR:3,ad:0,cp:0,apt:0},
+ safe: {n:'安全（広告なしで高めに見る）', d:'広告・クーポンなし。楽天の料率は最も高い区分、アフィリエイト経由15%・料率4%、遠隔地あて20%。',
+        remote:20,rush:0,shp:30,sys:4.5,pay:3.5,pt:1,affS:15,affR:4,ad:0,cp:0,apt:0},
+ worst:{n:'最悪（手数料が最も高い）', d:'安全の前提に、広告3%・クーポン2%を使い、1割がお急ぎ便、遠隔地あて25%。',
+        remote:25,rush:10,shp:30,sys:4.5,pay:3.5,pt:1,affS:15,affR:4,ad:3,cp:2,apt:0},
+};
+/*CALC-END*/
+
+/*PROFIT-BEGIN*/
+// 仕入値（税込）のうち原価になる額。ded＝仕入の消費税のうち控除できる割合（%）
+function costNet(buy,ded){return buy*(1-ded/100/11);}
+// 1個あたりの利益（税別）。other＝その他の費用（税込）
+function profitAmazon(P,c,fbaTaxIn,a,buy,ded,other){return netAmazon(P,c,fbaTaxIn,a)-costNet(buy,ded)-other/1.1;}
+function profitRakuten(R,a,buy,ded,other){return netRakuten(R,a)-costNet(buy,ded)-other/1.1;}
+// 利益が0になる仕入値（税込）。net＝仕入値を引く前に残る額
+function breakEvenBuy(net,ded,other){return (net-other/1.1)/(1-ded/100/11);}
+/*PROFIT-END*/
+
+const $=id=>document.getElementById(id);
+const KEYS=['remote','rush','shp','sys','pay','pt','affS','affR','ad','cp','apt'];
+const pick=k=>Object.fromEntries(KEYS.map(x=>[x,PRE[k][x]]));
+const ADV0=pick('safe');
+const DEF={pa:4980,buy:3000,pr:null,cat:14,size:1,scen:'safe',ded:'0',dedP:50,other:0,fba:null,mcf:null,...ADV0};
+const KEY='heibai-rieki-v1';
+let st={...DEF};
+try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(v)st={...DEF,...v};}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){}}
+const yen=v=>{const r=Math.round(v);return (r<0?'−':'')+Math.abs(r).toLocaleString('ja-JP')+'円';};
+const pct=v=>(v<0?'−':'')+Math.abs(v*100).toFixed(1)+'%';
+const num=(v,d)=>{const n=Number(v);return Number.isFinite(n)&&n>=0?n:d;};
+
+(function(){
+  const groups=[...new Set(CATS.map(c=>c.g))];
+  $('cat').innerHTML=groups.map(g=>`<optgroup label="${g}">`+CATS.map((c,i)=>c.g===g?`<option value="${i}">${c.n}</option>`:'').join('')+'</optgroup>').join('');
+  $('size').innerHTML=SIZES.map((s,i)=>`<option value="${i}">${s[0]}</option>`).join('');
+  $('scen').innerHTML=Object.keys(PRE).map(k=>`<option value="${k}">${PRE[k].n}</option>`).join('')+'<option value="custom">手入力（前提を変えた）</option>';
+})();
+
+function adv(P){ // 手入力がなければ料金表の値
+  const size=Number(st.size);
+  return {...st, fbaUse:st.fba==null?fbaFee(P,size):st.fba, mcf:st.mcf==null?mcfUse(size,st):st.mcf};
+}
+const dedPct=()=>st.ded==='part'?Math.min(100,num(st.dedP,0)):Number(st.ded);
+function calc(P,R){ // P＝Amazon価格、R＝楽天価格
+  const a=adv(P), c=CATS[Number(st.cat)], buy=num(st.buy,0), other=num(st.other,0), ded=dedPct();
+  return {a,c,buy,other,ded,
+    A:profitAmazon(P,c,a.fbaUse,a,buy,ded,other), R:profitRakuten(R,a,buy,ded,other),
+    beA:breakEvenBuy(netAmazon(P,c,a.fbaUse,a),ded,other), beR:breakEvenBuy(netRakuten(R,a),ded,other)};
+}
+function sync(){
+  ['pa','buy','cat','size','scen','ded','dedP','other'].forEach(k=>{$(k).value=st[k];});
+  $('pr').value=st.pr==null?'':st.pr;
+  $('fba').value=adv(Number(st.pa)||0).fbaUse; $('mcf').value=st.mcf==null?SIZES[Number(st.size)][3]:st.mcf;
+  KEYS.forEach(k=>{$(k).value=st[k];});
+}
+function tile(box,v,dl,profit,price,buy,be){
+  $(box).classList.toggle('neg',profit<0);
+  $(v).textContent=yen(profit);
+  $(dl).innerHTML=`<dt>販売価格</dt><dd>${yen(price)}</dd><dt>利益率</dt><dd>${pct(profit/price)}</dd>`
+    +`<dt>ROI</dt><dd>${buy>0?pct(profit/buy):'—'}</dd><dt>利益が0になる仕入値</dt><dd>${be>0?yen(Math.floor(be)):'—'}</dd>`;
+}
+function render(){
+  const P=Math.max(1,Number(st.pa)||0), R=st.pr==null?P:Math.max(1,st.pr);
+  const r=calc(P,R), {a,c,buy,other,ded}=r;
+  tile('boxA','pfA','dlA',r.A,P,buy,r.beA);
+  tile('boxR','pfR','dlR',r.R,R,buy,r.beR);
+  $('scenD').textContent=st.scen==='custom'?'「前提を変える」で手入力した値で計算しています。':PRE[st.scen].d;
+  const same=Math.ceil(rakutenPrice(P,c,a.fbaUse,a));
+  $('sameTxt').textContent=`Amazonと同じ利益になるのは${yen(same)}。`;
+  $('sameBtn').dataset.v=same;
+
+  const ap=P*a.apt/100/1.1, cost=costNet(buy,ded), ot=other/1.1;
+  const row=(l,x,y,cls)=>`<tr class="${cls||''}"><td>${l}</td><td>${x}</td><td>${y}</td></tr>`;
+  const m=v=>'−'+yen(v), pc=v=>`<td class="${v<0?'neg':''}">${yen(v)}</td>`;
+  $('detail').innerHTML=row('販売価格（税込）',yen(P),yen(R))
+    +row('売上の消費税',m(P/11),m(R/11))
+    +row('販売手数料（Amazon）／楽天の手数料',m(amazonFee(P,c)),m(R*rakRate(a)))
+    +row('出荷（FBA配送代行／MCF配送）',m(a.fbaUse/1.1),m((a.mcf+a.remote/100*40)/1.1))
+    +row('シッピーノ従量','—',m(a.shp))
+    +(ap>0?row('Amazonポイント',m(ap),'—'):'')
+    +(ot>0?row('その他の費用',m(ot),m(ot)):'')
+    +row(ded>0?'仕入値（消費税の控除後）':'仕入値',m(cost),m(cost))
+    +`<tr class="tot"><td>利益</td>${pc(r.A)}${pc(r.R)}</tr>`;
+
+  const prices=[...new Set([.7,.8,.85,.9,.95,1,1.05,1.1,1.2].map(k=>k===1?P:Math.max(10,Math.round(P*k/10)*10)))].sort((x,y)=>x-y);
+  $('quick').innerHTML=prices.map(p=>{const q=calc(p,p), cur=p===P;
+    return `<tr class="${cur?'hl':''}"><td>${yen(p)}${cur?'（いま）':''}</td>${pc(q.A)}${pc(q.R)}</tr>`;}).join('');
+
+  $('rate').innerHTML=`楽天で売価にかかる率は、いまの前提で <b>${(rakRate(a)*100).toFixed(2)}%</b>（税込の売価に対する税別の費用）。Amazonの販売手数料は、この価格で <b>${(amazonFee(P,c)/P*100).toFixed(2)}%</b> です。`;
+}
+
+$('pa').addEventListener('input',()=>{st.pa=Number($('pa').value)||0;save();if(st.fba==null)$('fba').value=fbaFee(st.pa,Number(st.size));render();});
+$('buy').addEventListener('input',()=>{st.buy=num($('buy').value,0);save();render();});
+$('pr').addEventListener('input',()=>{const v=num($('pr').value,0);st.pr=$('pr').value===''||v<=0?null:v;save();render();});
+$('sameBtn').addEventListener('click',()=>{st.pr=Number($('sameBtn').dataset.v);save();sync();render();});
+$('cat').addEventListener('change',()=>{st.cat=Number($('cat').value);save();render();});
+$('size').addEventListener('change',()=>{st.size=Number($('size').value);st.fba=null;st.mcf=null;save();sync();render();});
+$('ded').addEventListener('change',()=>{st.ded=$('ded').value;save();render();});
+['dedP','other'].forEach(k=>$(k).addEventListener('input',()=>{st[k]=num($(k).value,DEF[k]);save();render();}));
+['fba','mcf'].forEach(k=>$(k).addEventListener('input',()=>{st[k]=$(k).value===''?null:num($(k).value,null);save();render();}));
+KEYS.forEach(k=>$(k).addEventListener('input',()=>{st[k]=num($(k).value,ADV0[k]);st.scen='custom';$('scen').value='custom';save();render();}));
+$('scen').addEventListener('change',()=>{st.scen=$('scen').value;if(st.scen!=='custom')st={...st,...pick(st.scen)};save();sync();render();});
+$('reset').addEventListener('click',()=>{st={...st,...ADV0,scen:'safe',ded:'0',dedP:50,other:0,fba:null,mcf:null};save();sync();render();});
+sync();render();
+</script>
+</body>
+</html>
