@@ -158,8 +158,8 @@ td.neg{color:var(--warn)}
     <div class="adv">
       <label class="f" for="ded">仕入値の消費税
         <select id="ded">
-          <option value="0">控除できない</option>
           <option value="100">全額控除できる</option>
+          <option value="0">控除できない</option>
           <option value="part">一部だけ控除できる</option>
         </select>
       </label>
@@ -217,7 +217,7 @@ td.neg{color:var(--warn)}
     <b>計算の考え方</b>
     <ul>
       <li>利益は、消費税を除いた額です。売上にかかる消費税は納める分として引いています。</li>
-      <li>仕入値の消費税は「控除できない」が初期値で、入力した仕入値をそのまま原価にしています。インボイスのある仕入先などで控除できる場合は「前提を変える」で切り替えてください。</li>
+      <li>仕入値の消費税は「全額控除できる」が初期値で、仕入値（税込）÷1.1を原価にしています。控除できない仕入の場合は「前提を変える」で切り替えてください。</li>
       <li>Amazon側は販売手数料とFBA配送代行手数料、楽天側は楽天の手数料・MCF配送料・シッピーノの従量料金を引いています。</li>
       <li>FBAの保管料、FBAへの納品送料、返品の費用は入っていません。見込む場合は「その他の費用」に1個あたりの額を入れてください。Amazonと楽天の両方から引きます。</li>
       <li>楽天の月額出店料とシッピーノの月額は入れていません。メディア（本・DVDなど）は対象外です。</li>
@@ -326,8 +326,8 @@ const $=id=>document.getElementById(id);
 const KEYS=['remote','rush','shp','sys','pay','pt','affS','affR','ad','cp','apt'];
 const pick=k=>Object.fromEntries(KEYS.map(x=>[x,PRE[k][x]]));
 const ADV0=pick('safe');
-const DEF={pa:4980,buy:3000,pr:null,cat:14,size:1,scen:'safe',ded:'0',dedP:50,other:0,fba:null,mcf:null,...ADV0};
-const KEY='heibai-rieki-v1';
+const DEF={pa:4980,buy:3000,pr:null,cat:14,size:1,scen:'safe',ded:'100',dedP:50,other:0,fba:null,mcf:null,...ADV0};
+const KEY='heibai-rieki-v2';
 let st={...DEF};
 try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(v)st={...DEF,...v};}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){}}
@@ -406,7 +406,7 @@ $('ded').addEventListener('change',()=>{st.ded=$('ded').value;save();render();})
 ['fba','mcf'].forEach(k=>$(k).addEventListener('input',()=>{st[k]=$(k).value===''?null:num($(k).value,null);save();render();}));
 KEYS.forEach(k=>$(k).addEventListener('input',()=>{st[k]=num($(k).value,ADV0[k]);st.scen='custom';$('scen').value='custom';save();render();}));
 $('scen').addEventListener('change',()=>{st.scen=$('scen').value;if(st.scen!=='custom')st={...st,...pick(st.scen)};save();sync();render();});
-$('reset').addEventListener('click',()=>{st={...st,...ADV0,scen:'safe',ded:'0',dedP:50,other:0,fba:null,mcf:null};save();sync();render();});
+$('reset').addEventListener('click',()=>{st={...st,...ADV0,scen:'safe',ded:'100',dedP:50,other:0,fba:null,mcf:null};save();sync();render();});
 sync();render();
 </script>
 </body>
